@@ -110,9 +110,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }else if(requestCode == CAMERA){
             Bitmap bitmap = (Bitmap) data.getExtras().get("data");
-            if (bitmap != null) {
-                ivStudent.setImageBitmap(bitmap);
-            }
+            ivStudent.setImageBitmap(bitmap);
+
         }
     }
     private void takePhotoFromCamera() {
