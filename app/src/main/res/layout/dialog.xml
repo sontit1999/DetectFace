@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    android:padding="20dp"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="300dp"
+    android:layout_height="300dp">
+    <TextView
+        android:text="Select a photo"
+        android:textColor="@color/black"
+        android:textSize="25sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"></TextView>
+    <TextView
+        android:id="@+id/tv_takephoto"
+        android:text="Take a photo..."
+        android:layout_marginTop="20dp"
+        android:textColor="#312E2E"
+        android:textSize="20sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"></TextView>
+    <TextView
+        android:id="@+id/tv_gallery"
+        android:text="Choose from Library..."
+        android:layout_marginTop="20dp"
+        android:textColor="#312E2E"
+        android:textSize="20sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"></TextView>
+    <TextView
+        android:id="@+id/tv_cancel"
+        android:text="Cancel"
+        android:layout_marginTop="100dp"
+        android:textColor="#312E2E"
+        android:textSize="20sp"
+        android:layout_gravity="right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"></TextView>
+</LinearLayout>
