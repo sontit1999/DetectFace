@@ -12,9 +12,15 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -23,9 +29,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.mindorks.paracamera.Camera;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
+    Camera camera;
     private static final int GALLERY = 999;
     private static final int CAMERA = 998;
     Button btnchoose;
@@ -34,6 +46,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // Build the camera
+        camera = new Camera.Builder()
+                .resetToCorrectOrientation(true)// it will rotate the camera bitmap to the correct orientation from meta data
+                .setTakePhotoRequestCode(1)
+                .setDirectory("pics")
+                .setName("ali_" + System.currentTimeMillis())
+                .setImageFormat(Camera.IMAGE_JPEG)
+                .setCompression(75)
+                .setImageHeight(1000)// it will try to achieve this height as close as possible maintaining the aspect ratio;
+                .build(this);
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE }, 0);
         }
@@ -78,7 +101,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 dialog.dismiss();
-                takePhotoFromCamera();
+                try {
+                    camera.takePicture();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
 
             }
         });
@@ -93,31 +120,32 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
     private void choosePhotoFromGallary() {
-        Intent galleryIntent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(galleryIntent, GALLERY);
+            Intent galleryIntent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            startActivityForResult(galleryIntent, GALLERY);
+
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == GALLERY && data != null){
-             Uri url =   data.getData();
+        Log.d("test","On result Cammera");
+        if(requestCode == Camera.REQUEST_TAKE_PHOTO){
+            Bitmap bitmap = camera.getCameraBitmap();
+            if(bitmap != null) {
+                ivStudent.setImageBitmap(bitmap);
+            }else{
+                Toast.makeText(this.getApplicationContext(),"Picture not taken!",Toast.LENGTH_SHORT).show();
+            }
+        }else if(requestCode==GALLERY){
+            Uri url =  data.getData();
             try {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(getBaseContext().getContentResolver(),url);
                 ivStudent.setImageBitmap(bitmap);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }else if(requestCode == CAMERA){
-            Bitmap bitmap = (Bitmap) data.getExtras().get("data");
-            ivStudent.setImageBitmap(bitmap);
+        }
 
-        }
     }
-    private void takePhotoFromCamera() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takePictureIntent, CAMERA);
-        }
-    }
+
 }
