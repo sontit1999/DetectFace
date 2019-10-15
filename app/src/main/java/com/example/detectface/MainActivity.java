@@ -6,40 +6,46 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.Dialog;
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.media.ExifInterface;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
+import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+
+import com.example.detectface.retrofit.APIUtils;
+import com.example.detectface.retrofit.DataClient;
 import com.mindorks.paracamera.Camera;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Calendar;
+import java.io.InputStream;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 public class MainActivity extends AppCompatActivity {
     Camera camera;
+    Bitmap bitmap;
+    String realpath;
     private static final int GALLERY = 999;
-    private static final int CAMERA = 998;
     Button btnchoose;
     ImageView ivStudent;
     @Override
@@ -56,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
                 .setCompression(75)
                 .setImageHeight(1000)// it will try to achieve this height as close as possible maintaining the aspect ratio;
                 .build(this);
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE }, 0);
         }
@@ -120,9 +125,9 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
     private void choosePhotoFromGallary() {
-            Intent galleryIntent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            Intent galleryIntent = new Intent(Intent.ACTION_PICK);
+            galleryIntent.setType("image/*");
             startActivityForResult(galleryIntent, GALLERY);
-
     }
 
     @Override
@@ -130,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d("test","On result Cammera");
         if(requestCode == Camera.REQUEST_TAKE_PHOTO){
-            Bitmap bitmap = camera.getCameraBitmap();
+            bitmap = camera.getCameraBitmap();
             if(bitmap != null) {
                 ivStudent.setImageBitmap(bitmap);
             }else{
@@ -138,14 +143,70 @@ public class MainActivity extends AppCompatActivity {
             }
         }else if(requestCode==GALLERY){
             Uri url =  data.getData();
+            realpath = getRealPathFromURI(url);
+            Log.d("test",realpath);
+            File file = new File(realpath);
+            String file_path = file.getAbsolutePath();
+            Log.d("tests",file.getAbsolutePath());
+            RequestBody requestBody = RequestBody.create(MediaType.parse("multipart/form-data"),file);
+            MultipartBody.Part body = MultipartBody.Part.createFormData("image",file_path,requestBody);
+
+            DataClient dataClient = APIUtils.getData();
+            Call<String> callback = dataClient.UploadPhoto(body);
+            callback.enqueue(new Callback<String>() {
+                @Override
+                public void onResponse(Call<String> call, Response<String> response) {
+                    Log.d("test","success");
+                }
+
+                @Override
+                public void onFailure(Call<String> call, Throwable t) {
+                    Log.d("test","Fail");
+                    Log.d("error",t.getMessage());
+                }
+            });
+
+
+
+
+            //            try {
+//                Bitmap bitmap = MediaStore.Images.Media.getBitmap(getBaseContext().getContentResolver(),url);
+//                ivStudent.setImageBitmap(bitmap);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
             try {
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(getBaseContext().getContentResolver(),url);
-                ivStudent.setImageBitmap(bitmap);
-            } catch (IOException e) {
+                InputStream inputStream = getContentResolver().openInputStream(url);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                if(bitmap!= null){
+                    ivStudent.setImageBitmap(bitmap);
+                }
+            } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+
         }
 
     }
+    private String getRealPathFromURI(Uri contentURI)
+    {
+        String result = null;
 
+        Cursor cursor = getContentResolver().query(contentURI, null, null, null, null);
+
+        if (cursor == null)
+        { // Source is Dropbox or other similar local file path
+            result = contentURI.getPath();
+        }
+        else
+        {
+            if(cursor.moveToFirst())
+            {
+                int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+                result = cursor.getString(idx);
+            }
+            cursor.close();
+        }
+        return result;
+    }
 }
